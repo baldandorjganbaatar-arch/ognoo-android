@@ -1,0 +1,54 @@
+
+name: Build Ognoo APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract ZIP
+        run: |
+          unzip -q ognoo-github-upload.zip -d .
+          cd ognoo-github-upload
+          npm install
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK
+        run: sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Create Android project
+        working-directory: ognoo-github-upload
+        run: npx cap add android
+
+      - name: Sync Android
+        working-directory: ognoo-github-upload
+        run: npx cap sync android
+
+      - name: Build APK
+        working-directory: ognoo-github-upload/android
+        run: chmod +x gradlew && ./gradlew assembleDebug --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ognoo-APK
+          path: ognoo-github-upload/android/app/build/outputs/apk/debug/app-debug.apk
